@@ -1,7 +1,9 @@
 import time
 import copy
+from datetime import datetime
 
 import torch
+from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from .utils import mean_iou
@@ -10,7 +12,7 @@ from .utils import mean_iou
 class Trainer:
 
     def __init__(self, model, dataloaders, criterion, optimizer, num_epochs=25,
-                 is_inception=False):
+                 is_inception=False, main_log_dir="./"):
         """ Initialization method for Trainer base class
 
         Args:
@@ -33,6 +35,8 @@ class Trainer:
         self.optimizer = optimizer
         self.num_epochs = num_epochs
         self.is_inception = is_inception
+        self.writer = SummaryWriter(main_log_dir+'experiments/tensorboard_runs/'\
+            +datetime.now().strftime('%Y-%m-%d-%H_%M_%S') + '/')
 
     def _train(self):
         """ This function is used to train a model
@@ -96,6 +100,8 @@ class Trainer:
                 epoch_loss = running_loss / len(self.dataloaders[phase].dataset)
                 epoch_mean_iou = running_mean_iou / len(self.dataloaders[phase])
                 print('{} Loss: {:.4f} mIoU: {:.4f}'.format(phase, epoch_loss, epoch_mean_iou))
+                self.writer.add_scalar(f'{phase}/epoch_loss', epoch_loss, epoch+1)
+                self.writer.add_scalar(f'{phase}/epoch_mean_iou', epoch_mean_iou, epoch+1)
                 # deep copy the model
                 if phase == 'valid' and epoch_mean_iou > best_mean_iou:
                     best_mean_iou = epoch_mean_iou
